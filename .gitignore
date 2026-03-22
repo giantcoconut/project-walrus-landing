@@ -1,0 +1,23 @@
+node_modules
+.next
+out
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env*
+.DS_Store
+desktop.ini
+
+# keep only public project readme
+*.md
+!README.md
+
+# source/reference docs not needed in repo surface
+*.pdf
+llms-full.txt
+
+# legacy static prototype files
+index.html
+styles.css
+app.js
