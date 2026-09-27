@@ -1,503 +1,243 @@
 "use client";
 
 import { useState } from "react";
-import { motion, useMotionValue, useScroll, useSpring, useTransform } from "framer-motion";
-import {
-  GlassCard,
-  Pill,
-  PrimaryButton,
-  SecondaryButton,
-  SectionTitle
-} from "@/components/ui";
-import { ParticleField } from "@/components/particle-field";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 
-const PRODUCT_NAME = "walrus";
-const TAGLINE = "A real-time signal layer for breaking news.";
-
-const navLinks = [
-  { href: "#how", label: "How it works" },
-  { href: "#feeds", label: "Feeds" },
-  { href: "#event-hubs", label: "Event hubs" },
-  { href: "#waitlist", label: "Waitlist" }
+const SOURCE_STREAM = [
+  "Reuters / central bank signals faster review",
+  "AP / committee splits over exchange licensing",
+  "FT / three funds pause exposure until ruling",
+  "Bloomberg / regulator publishes consultation window",
+  "CoinDesk / market makers contest policy read"
 ];
 
-const feedCards = [
+const CLAIMS = [
   {
-    title: "Breaking",
-    copy: "Freshly structured claims from new headlines, ranked by recency and source quality."
+    id: "01",
+    label: "Breaking",
+    claim: "Regulatory council opened review on exchange licensing framework",
+    signal: "+18.4%",
+    tone: "support"
   },
   {
-    title: "Hot",
-    copy: "Claims with accelerating support activity and high momentum in the last few hours."
+    id: "02",
+    label: "Contested",
+    claim: "Institutional desks reduced exposure after consultation leak",
+    signal: "51 / 49",
+    tone: "split"
   },
   {
-    title: "Contested",
-    copy: "Events where support and opposition remain close, signaling unresolved narratives."
-  },
-  {
-    title: "Reversal",
-    copy: "Claims that flipped from net support to net opposition, or the opposite, in real time."
+    id: "03",
+    label: "Reversal",
+    claim: "Policy delay probability flipped after second-source confirmation",
+    signal: "-12.7%",
+    tone: "reverse"
   }
 ];
 
-const timelineEntries = [
-  {
-    time: "09:02",
-    event: "Headline cluster created",
-    note: "6 trusted sources merged into one event hub."
-  },
-  {
-    time: "09:08",
-    event: "Canonical claim generated",
-    note: "Subject, predicate, and object mapped for onchain signaling."
-  },
-  {
-    time: "09:21",
-    event: "Signal surge detected",
-    note: "Support stake climbed 42% in 13 minutes."
-  },
-  {
-    time: "09:47",
-    event: "Contestation alert",
-    note: "Opposition accelerated and net conviction narrowed."
-  }
+const PIPELINE = [
+  ["ingest", "trusted headlines land within seconds"],
+  ["cluster", "duplicates collapse into one event hub"],
+  ["canonize", "the event becomes an explicit triple"],
+  ["signal", "support and opposition move in public"]
 ];
 
-const valueProps = [
-  {
-    title: "Not truth. Signal.",
-    copy: "The system exposes conviction dynamics, not final verdicts."
-  },
-  {
-    title: "See contestation early.",
-    copy: "Surface uncertainty while narratives are still forming."
-  },
-  {
-    title: "Track reversals in real time.",
-    copy: "Detect when consensus direction starts to flip."
+const FEEDS = ["Hot conviction", "Most contested", "Consensus reversing", "Fresh claims"];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 32 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.72, ease: [0.16, 1, 0.3, 1] as const }
   }
-];
-
-function FloatingCard({
-  className,
-  delay,
-  children
-}: {
-  className?: string;
-  delay: number;
-  children: React.ReactNode;
-}) {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), {
-    stiffness: 220,
-    damping: 20,
-    mass: 0.7
-  });
-
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8, 8]), {
-    stiffness: 220,
-    damping: 20,
-    mass: 0.7
-  });
-
-  return (
-    <motion.div
-      className={className}
-      style={{ rotateX, rotateY }}
-      onMouseMove={(event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / rect.width - 0.5;
-        const y = (event.clientY - rect.top) / rect.height - 0.5;
-        mouseX.set(x);
-        mouseY.set(y);
-      }}
-      onMouseLeave={() => {
-        mouseX.set(0);
-        mouseY.set(0);
-      }}
-      animate={{ y: [0, -10, 0] }}
-      transition={{ repeat: Number.POSITIVE_INFINITY, duration: 6.8, ease: "easeInOut", delay }}
-    >
-      {children}
-    </motion.div>
-  );
-}
+};
 
 export default function Page() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const { scrollY } = useScroll();
-  const bgSlowY = useTransform(scrollY, [0, 1600], [0, 220]);
-  const bgFastY = useTransform(scrollY, [0, 1600], [0, -180]);
-  const cardsParallaxY = useTransform(scrollY, [0, 1000], [0, 120]);
+  const { scrollYProgress } = useScroll();
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 120,
+    damping: 28,
+    mass: 0.5
+  });
 
-  const reveal = {
-    hidden: { opacity: 0, y: 28 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.65,
-        ease: [0.22, 1, 0.36, 1] as const
-      }
-    }
-  };
+  const apertureRotate = useTransform(smoothProgress, [0, 1], [0, 120]);
+  const apertureScale = useTransform(smoothProgress, [0, 0.55, 1], [1, 1.12, 0.92]);
+  const fieldY = useTransform(smoothProgress, [0, 1], [0, -180]);
+  const scanX = useTransform(smoothProgress, [0, 1], ["-12%", "12%"]);
 
   return (
-    <div className="relative overflow-x-clip pb-14">
-      <ParticleField className="pointer-events-none fixed inset-0 -z-10 opacity-40" />
+    <main className="min-h-screen overflow-x-clip bg-[#ece2ce] text-[#11110e]">
+      <motion.div className="fixed left-0 top-0 z-50 h-1 origin-left bg-[#c7ff35]" style={{ scaleX: smoothProgress }} />
 
-      <motion.div
-        style={{ y: bgFastY }}
-        className="pointer-events-none absolute left-[-12rem] top-24 -z-[1] h-72 w-72 rounded-full bg-cyan-300/10 blur-3xl"
-      />
-      <motion.div
-        style={{ y: bgSlowY }}
-        className="pointer-events-none absolute right-[-10rem] top-[30rem] -z-[1] h-80 w-80 rounded-full bg-blue-400/10 blur-3xl"
-      />
+      <section className="hero-shell relative min-h-svh overflow-hidden px-5 py-5 sm:px-8 lg:px-10">
+        <motion.div aria-hidden="true" className="signal-field" style={{ y: fieldY }}>
+          <motion.div className="signal-aperture" style={{ rotate: apertureRotate, scale: apertureScale }}>
+            <span />
+            <span />
+            <span />
+            <span />
+          </motion.div>
+          <motion.div className="scan-blade" style={{ x: scanX }} />
+        </motion.div>
 
-      <header className="sticky top-4 z-40 mx-auto mt-4 w-[min(1120px,94vw)] rounded-2xl border border-white/15 bg-[#060f20]/70 px-5 py-3 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-3">
-          <a href="#" className="flex items-center gap-2.5">
-            <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-white/[0.03]">
-              <span className="h-3.5 w-3.5 rounded-sm bg-gradient-to-br from-glow to-emerald-300" />
-            </span>
-            <span className="text-lg font-semibold tracking-tight text-white">{PRODUCT_NAME}</span>
+        <header className="relative z-20 flex items-start justify-between gap-4">
+          <a href="#" className="brand-lockup" aria-label="walrus home">
+            <span>walrus</span>
+            <i>news-to-claims engine</i>
           </a>
-
-          <nav className="hidden items-center gap-7 text-sm text-mist md:flex">
-            {navLinks.map((link) => (
-              <a key={link.href} href={link.href} className="transition hover:text-white">
-                {link.label}
+          <nav className="hidden items-center gap-2 text-[11px] uppercase tracking-[0.18em] md:flex">
+            {["engine", "signals", "access"].map((item) => (
+              <a key={item} href={`#${item}`} className="nav-chip">
+                {item}
               </a>
             ))}
           </nav>
+        </header>
 
-          <PrimaryButton href="#waitlist" className="px-4 py-2.5 text-xs sm:text-sm">
-            Join waitlist
-          </PrimaryButton>
+        <div className="relative z-10 grid min-h-[calc(100svh-7rem)] items-end gap-10 pb-8 pt-14 lg:grid-cols-[1.1fr_0.9fr]">
+          <motion.div initial="hidden" animate="show" variants={fadeUp}>
+            <p className="kicker">Live conviction, not headline theater</p>
+            <h1 className="hero-title">
+              walrus turns breaking news into stake-readable claims.
+            </h1>
+            <div className="mt-8 flex max-w-2xl flex-col gap-4 sm:flex-row sm:items-end">
+              <p className="max-w-md text-base leading-7 text-[#3c392f] sm:text-lg">
+                It watches trusted sources, compresses messy coverage into canonical triples, and exposes where support,
+                opposition, and reversals are moving.
+              </p>
+              <a href="#access" className="primary-action">
+                request access
+              </a>
+            </div>
+          </motion.div>
+
+          <motion.aside
+            initial={{ opacity: 0, y: 24, rotate: -1.5 }}
+            animate={{ opacity: 1, y: 0, rotate: 0 }}
+            transition={{ duration: 0.8, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="operator-panel"
+          >
+            <div className="panel-topline">
+              <span>event hub / live</span>
+              <span>09:47:18</span>
+            </div>
+            <div className="source-stream">
+              {SOURCE_STREAM.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+            <div className="claim-slab">
+              <b>canonical claim</b>
+              <p>Regulatory council {"->"} opened review on {"->"} exchange licensing framework</p>
+            </div>
+            <div className="signal-meter" aria-label="support 61 percent, oppose 39 percent">
+              <span style={{ width: "61%" }}>support 61</span>
+              <i style={{ width: "39%" }}>oppose 39</i>
+            </div>
+          </motion.aside>
         </div>
-      </header>
+      </section>
 
-      <main>
-        <section className="relative mx-auto grid w-[min(1120px,94vw)] items-center gap-14 pb-20 pt-20 lg:grid-cols-[1.02fr_0.98fr] lg:pt-24">
+      <section id="engine" className="relative border-y border-[#11110e] bg-[#11110e] text-[#ece2ce]">
+        <div className="mx-auto grid w-[min(1180px,92vw)] gap-12 py-20 lg:grid-cols-[0.75fr_1.25fr] lg:py-28">
           <motion.div
             initial="hidden"
-            animate="show"
-            variants={reveal}
-            className="relative z-10"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.35 }}
+            variants={fadeUp}
+            className="lg:sticky lg:top-16 lg:self-start"
           >
-            <Pill className="mb-5">Intuition-powered signal discovery</Pill>
-            <h1 className="max-w-[12ch] text-5xl font-semibold leading-[1.02] sm:text-6xl md:text-7xl">
-              <span className="text-gradient">{TAGLINE}</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-mist/90 sm:text-lg">
-              {PRODUCT_NAME} transforms trusted headlines into structured claims and reveals where community conviction
-              is strengthening, contested, or reversing.
-            </p>
-
-            <div className="mt-9 flex flex-wrap gap-3">
-              <PrimaryButton href="#waitlist">Join waitlist</PrimaryButton>
-              <SecondaryButton href="#how">See how it works</SecondaryButton>
-            </div>
-
-            <div className="mt-10 grid max-w-xl grid-cols-3 gap-3 text-sm">
-              <GlassCard className="p-4">
-                <p className="text-2xl font-semibold text-white">4</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-mist">Core Feeds</p>
-              </GlassCard>
-              <GlassCard className="p-4">
-                <p className="text-2xl font-semibold text-white">Live</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-mist">Signal Layer</p>
-              </GlassCard>
-              <GlassCard className="p-4">
-                <p className="text-2xl font-semibold text-white">Fast</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-mist">Event Mapping</p>
-              </GlassCard>
-            </div>
+            <p className="kicker text-[#c7ff35]">the machine</p>
+            <h2 className="section-title max-w-[9ch] text-[#f7edd9]">From noise to an accountable signal trail.</h2>
           </motion.div>
 
-          <motion.div style={{ y: cardsParallaxY }} className="relative mx-auto h-[470px] w-full max-w-[540px] [perspective:1400px]">
-            <div className="pointer-events-none absolute -inset-10 rounded-[3rem] bg-gradient-to-tr from-cyan-300/15 via-transparent to-blue-300/10 blur-2xl" />
+          <div className="pipeline-stack">
+            {PIPELINE.map(([title, copy], index) => (
+              <motion.article
+                key={title}
+                initial={{ opacity: 0, x: 42 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ duration: 0.62, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                className="pipeline-row"
+              >
+                <span>0{index + 1}</span>
+                <h3>{title}</h3>
+                <p>{copy}</p>
+              </motion.article>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            <FloatingCard
-              delay={0.1}
-              className="glass surface-glow absolute left-0 top-12 w-[72%] rounded-2xl p-5 will-change-transform"
-            >
-              <Pill className="mb-3">Headline ingestion</Pill>
-              <p className="text-sm text-white/95">Global wire reports regulatory hearing update from three regions.</p>
-              <div className="mt-4 flex gap-2 text-[11px] text-mist">
-                <span className="rounded-full border border-white/15 px-2 py-1">Reuters</span>
-                <span className="rounded-full border border-white/15 px-2 py-1">Bloomberg</span>
-                <span className="rounded-full border border-white/15 px-2 py-1">WSJ</span>
-              </div>
-            </FloatingCard>
-
-            <FloatingCard
-              delay={0.35}
-              className="glass surface-glow absolute right-0 top-40 w-[70%] rounded-2xl p-5 will-change-transform"
-            >
-              <Pill className="mb-3">Canonical claim</Pill>
-              <p className="text-sm text-white/95">Subject: Regulatory body</p>
-              <p className="text-sm text-white/95">Predicate: launched review on</p>
-              <p className="text-sm text-white/95">Object: cross-border exchange activity</p>
-            </FloatingCard>
-
-            <FloatingCard
-              delay={0.6}
-              className="glass surface-glow absolute bottom-2 left-10 w-[74%] rounded-2xl p-5 will-change-transform"
-            >
-              <Pill className="mb-3">Support vs oppose</Pill>
-              <div className="space-y-3">
-                <div>
-                  <div className="mb-1 flex items-center justify-between text-xs text-mist">
-                    <span>Support</span>
-                    <span>63%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-white/10">
-                    <div className="h-full w-[63%] rounded-full bg-gradient-to-r from-emerald-300 to-glow" />
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1 flex items-center justify-between text-xs text-mist">
-                    <span>Oppose</span>
-                    <span>37%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-white/10">
-                    <div className="h-full w-[37%] rounded-full bg-gradient-to-r from-rose-400 to-orange-300" />
-                  </div>
-                </div>
-              </div>
-            </FloatingCard>
+      <section id="signals" className="signal-section relative px-5 py-20 sm:px-8 lg:px-10 lg:py-28">
+        <div className="mx-auto w-[min(1180px,92vw)]">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.25 }} variants={fadeUp}>
+            <p className="kicker">signal surfaces</p>
+            <h2 className="section-title max-w-4xl">No static feature grid. Just the live reads people open for.</h2>
           </motion.div>
-        </section>
 
-        <motion.section
-          id="how"
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.25 }}
-          variants={reveal}
-          className="mx-auto mt-6 w-[min(1120px,94vw)]"
-        >
-          <GlassCard>
-            <SectionTitle
-              eyebrow="How it works"
-              title="A simple flow built for speed and clarity"
-              description="From ingestion to conviction, the pipeline keeps every event machine-readable and economically interpretable."
-            />
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {[
-                {
-                  title: "Ingest",
-                  copy: "Trusted sources stream in continuously with source-level quality controls."
-                },
-                {
-                  title: "Structure",
-                  copy: "Headlines are clustered into event hubs and converted into canonical graph claims."
-                },
-                {
-                  title: "Signal",
-                  copy: "Community stakes support or opposition, exposing narrative momentum in real time."
-                }
-              ].map((step, index) => (
-                <motion.div
-                  key={step.title}
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.25 }}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] p-5"
-                >
-                  <Pill className="mb-4">Step 0{index + 1}</Pill>
-                  <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-mist/90">{step.copy}</p>
-                </motion.div>
-              ))}
-            </div>
-          </GlassCard>
-        </motion.section>
-
-        <motion.section
-          id="feeds"
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.25 }}
-          variants={reveal}
-          className="mx-auto mt-6 w-[min(1120px,94vw)]"
-        >
-          <GlassCard>
-            <SectionTitle
-              eyebrow="Feeds"
-              title="Four lenses for narrative discovery"
-              description="Scan what is new, what is accelerating, what is contested, and what is reversing."
-            />
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {feedCards.map((item) => (
-                <motion.div
-                  key={item.title}
-                  whileHover={{ y: -5 }}
-                  transition={{ duration: 0.25 }}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] p-5"
-                >
-                  <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-mist/90">{item.copy}</p>
-                </motion.div>
-              ))}
-            </div>
-          </GlassCard>
-        </motion.section>
-
-        <motion.section
-          id="event-hubs"
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.25 }}
-          variants={reveal}
-          className="relative mx-auto mt-6 w-[min(1120px,94vw)]"
-        >
-          <motion.div
-            style={{ y: bgSlowY }}
-            className="pointer-events-none absolute right-10 top-4 -z-[1] h-44 w-44 rounded-full bg-cyan-300/10 blur-2xl"
-          />
-
-          <GlassCard>
-            <div className="grid gap-8 lg:grid-cols-[1fr_1.05fr]">
-              <SectionTitle
-                eyebrow="Event hubs"
-                title="Clustered stories with timeline context"
-                description="Each hub groups related reporting into one event surface with a timeline and signal history."
-              />
-
-              <div className="rounded-2xl border border-white/10 bg-[#071226]/80 p-5">
-                <div className="mb-5 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-white">Hub Timeline</h3>
-                  <Pill>Live updates</Pill>
+          <div className="mt-12 divide-y divide-[#11110e] border-y border-[#11110e]">
+            {CLAIMS.map((item) => (
+              <motion.article key={item.id} className="claim-row" whileHover={{ x: 10 }}>
+                <span className="claim-id">{item.id}</span>
+                <div>
+                  <p>{item.label}</p>
+                  <h3>{item.claim}</h3>
                 </div>
-                <ol className="relative space-y-4 pl-4">
-                  <span className="pointer-events-none absolute bottom-1 left-[5px] top-1 w-px bg-gradient-to-b from-glow/60 via-white/20 to-transparent" />
-                  {timelineEntries.map((entry) => (
-                    <li key={`${entry.time}-${entry.event}`} className="relative pl-6">
-                      <span className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-glow shadow-[0_0_20px_rgba(98,255,210,0.7)]" />
-                      <p className="text-xs uppercase tracking-[0.16em] text-mist">{entry.time}</p>
-                      <p className="mt-1 text-sm font-semibold text-white">{entry.event}</p>
-                      <p className="mt-1 text-sm text-mist/90">{entry.note}</p>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          </GlassCard>
-        </motion.section>
+                <strong data-tone={item.tone}>{item.signal}</strong>
+              </motion.article>
+            ))}
+          </div>
 
-        <motion.section
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.25 }}
-          variants={reveal}
-          className="mx-auto mt-6 w-[min(1120px,94vw)]"
-        >
-          <GlassCard>
-            <SectionTitle
-              eyebrow="Why it matters"
-              title="Designed for informed interpretation"
-              description="Signals reveal how confidence changes over time when news is still unfolding."
-            />
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {valueProps.map((prop) => (
-                <div key={prop.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-                  <h3 className="text-lg font-semibold text-white">{prop.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-mist/90">{prop.copy}</p>
-                </div>
+          <div className="feed-marquee mt-12" aria-label="Available feed types">
+            <div>
+              {[...FEEDS, ...FEEDS].map((feed, index) => (
+                <span key={`${feed}-${index}`}>{feed}</span>
               ))}
             </div>
-            <p className="mt-7 text-sm text-mist/80">
-              Signals represent community conviction, not absolute truth.
-            </p>
-          </GlassCard>
-        </motion.section>
+          </div>
+        </div>
+      </section>
 
-        <motion.section
-          id="waitlist"
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.3 }}
-          variants={reveal}
-          className="mx-auto mt-6 w-[min(1120px,94vw)]"
-        >
-          <GlassCard className="relative overflow-hidden">
-            <div className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-glow/60 to-transparent" />
-            <SectionTitle
-              eyebrow="Waitlist"
-              title="Get launch access"
-              description="Join the early cohort for product updates and first-release invites."
-            />
+      <section id="access" className="access-section border-t border-[#11110e] px-5 py-20 sm:px-8 lg:px-10">
+        <div className="mx-auto grid w-[min(1180px,92vw)] gap-10 lg:grid-cols-[1fr_0.85fr] lg:items-end">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
+            <p className="kicker">early access</p>
+            <h2 className="section-title max-w-3xl">Bring the scanner online before the public launch.</h2>
+          </motion.div>
 
-            <form
-              className="mt-8 flex flex-col gap-3 sm:flex-row"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!email.trim()) {
-                  return;
-                }
-                setSubmitted(true);
-                setEmail("");
-              }}
-            >
+          <form
+            className="access-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!email.trim()) {
+                return;
+              }
+              setSubmitted(true);
+              setEmail("");
+            }}
+          >
+            <label htmlFor="email">work email</label>
+            <div>
               <input
+                id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@company.com"
-                className="h-12 w-full rounded-xl border border-white/20 bg-white/[0.03] px-4 text-white placeholder:text-mist/70 focus:border-glow/70 focus:outline-none"
+                placeholder="you@desk.com"
               />
-              <button
-                type="submit"
-                className="h-12 rounded-xl bg-gradient-to-r from-glow to-emerald-300 px-6 text-sm font-bold text-slate-900 transition hover:brightness-105"
-              >
-                {submitted ? "You're in" : "Join waitlist"}
-              </button>
-            </form>
-
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              {[
-                "Atlas Labs",
-                "Northstar",
-                "Signal Collective",
-                "Chainframe"
-              ].map((logo) => (
-                <span
-                  key={logo}
-                  className="rounded-full border border-white/15 bg-white/[0.03] px-4 py-2 text-xs uppercase tracking-[0.14em] text-mist"
-                >
-                  {logo}
-                </span>
-              ))}
+              <button type="submit">{submitted ? "logged" : "join"}</button>
             </div>
-
-            <p className="mt-5 text-sm text-mist/85">Launch updates only, no spam.</p>
-          </GlassCard>
-        </motion.section>
-      </main>
-
-      <footer className="mx-auto mt-8 flex w-[min(1120px,94vw)] flex-wrap items-center justify-between gap-4 border-t border-white/10 py-8 text-sm text-mist">
-        <p>{PRODUCT_NAME} (c) {new Date().getFullYear()}</p>
-        <div className="flex flex-wrap items-center gap-5">
-          {[
-            { label: "Docs", href: "#" },
-            { label: "X", href: "#" },
-            { label: "Discord", href: "#" },
-            { label: "Privacy", href: "#" },
-            { label: "Terms", href: "#" }
-          ].map((link) => (
-            <a key={link.label} href={link.href} className="transition hover:text-white">
-              {link.label}
-            </a>
-          ))}
+            <p>Launch notes only. No digest sludge.</p>
+          </form>
         </div>
-      </footer>
-    </div>
+      </section>
+    </main>
   );
 }
